@@ -2253,6 +2253,13 @@ const ecrireDoc=(p,o)=>fs("PATCH",p,{fields:champsFs(o)});
 const creerDoc=(coll,id,o)=>fs("POST",coll,{fields:champsFs(o)},"?documentId="+encodeURIComponent(id));
 const majDoc=(p,o)=>fs("PATCH",p,{fields:champsFs(o)},"?"+Object.keys(o).map(k=>"updateMask.fieldPaths="+encodeURIComponent(k)).join("&")+"&currentDocument.exists=true");
 const effacerDoc=p=>fs("DELETE",p);
+function autreDe(chemin,d){
+  const [c,id]=chemin.split("/");
+  if(c==="amities"){ const p=id.split("_"); return p[0]===L.uid?p[1]:p[0]; }
+  if(c==="duels"){ const x=d||NET.duels.find(z=>z._id===id)||(vue.dl&&vue.dl.d&&vue.dl.d._id===id?vue.dl.d:null); if(x) return x.a===L.uid?x.b:x.a; }
+  return null;
+}
+function signaler(chemin,d){ if(!EN_LIGNE||!L) return; const u=autreDe(chemin,d); if(!u||u===L.uid) return; ecrireDoc("signaux/"+u,{t:Date.now(),de:L.uid}).catch(()=>{}); }
 async function chercher(coll,champ,val){
   const j=await fs("POST","",{structuredQuery:{from:[{collectionId:coll}],where:{fieldFilter:{field:{fieldPath:champ},op:"EQUAL",value:versFs(val)}},limit:200}},":runQuery");
   return (Array.isArray(j)?j:[]).filter(x=>x.document).map(x=>docJs(x.document));
@@ -2316,17 +2323,36 @@ async function rafraichir(silence){
   if(!EN_LIGNE||!L||!MOI||enRafr) return; enRafr=true;
   try{
     const uid=L.uid, [env,rec,d1,d2]=await Promise.all([chercher("amities","de",uid),chercher("amities","a",uid),chercher("duels","a",uid),chercher("duels","b",uid)]);
+    pareil=false; const avant=sigNet();
     const amis=[...env,...rec].filter(x=>x.etat==="ok").map(x=>x.de===uid?{uid:x.a,pseudo:x.pa,id:x._id}:{uid:x.de,pseudo:x.pde,id:x._id});
     amis.sort((a,b)=>a.pseudo.localeCompare(b.pseudo,"fr"));
     NET={amis,recues:rec.filter(x=>x.etat==="attente"),envoyees:env.filter(x=>x.etat==="attente"),duels:[...d1,...d2].sort((a,b)=>(b.m||b.t||0)-(a.m||a.t||0)),charge:true,maj:Date.now(),err:""};
-    compterDuels();
+    compterDuels(); pareil=silence&&avant===sigNet();
   }catch(e){ NET.err=e.message; if(!silence) toast(e.message); }
   finally{ enRafr=false; }
-  enTete();
+  enTete(); dernierTout=Date.now();
+  if(pareil) return;
   const v=vue.dl; if(v&&v.ecran==="resultat"&&v.d){ const n=NET.duels.find(x=>x._id===v.d._id); if(n) v.d=n; }
-  if(vue.tab==="duels"&&(!v||v.ecran==="accueil"||v.ecran==="resultat")) duels();
+  const saisie=document.activeElement&&/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)&&document.activeElement.closest("#s-duels");
+  if(vue.tab==="duels"&&(!v||v.ecran==="accueil"||v.ecran==="resultat")&&!saisie) duels();
 }
-setInterval(()=>{ if(EN_LIGNE&&L&&MOI&&document.visibilityState==="visible"&&vue.tab==="duels"&&(!vue.dl||vue.dl.ecran==="accueil"||vue.dl.ecran==="resultat")) rafraichir(true); },45000);
+let pareil=false, dernierTout=0, dernierSig=0, dernierLu=0, tVeille=0;
+const sigNet=()=>JSON.stringify([NET.charge,NET.amis,NET.recues,NET.envoyees,NET.duels]);
+/* Veille : toutes les 4 s sur l'onglet Duels, toutes les 20 s ailleurs, on lit son signal (une seule lecture) ;
+   s'il a bougé, ou toutes les 5 minutes par sécurité, on recharge amis et duels. Rien pendant une question. */
+function veille(){
+  clearTimeout(tVeille);
+  tVeille=setTimeout(async()=>{
+    try{
+      const ici=vue.tab==="duels", jeu=vue.dl&&vue.dl.ecran==="jouer";
+      if(EN_LIGNE&&L&&MOI&&NET.charge&&document.visibilityState==="visible"&&!jeu&&(ici||Date.now()-dernierLu>=20000)){
+        dernierLu=Date.now(); const s=await lireDoc("signaux/"+L.uid).catch(()=>null), t=s&&s.t||0;
+        if(t>dernierSig||Date.now()-dernierTout>300000){ dernierSig=Math.max(dernierSig,t); await rafraichir(true); }
+      }
+    }finally{ veille(); }
+  },4000);
+}
+veille();
 const aMoi=d=>!!L&&((d.etat==="b"&&d.b===L.uid)||(d.etat==="a"&&d.a===L.uid));
 function aFaire(){ if(!EN_LIGNE||!L||!MOI||!NET.charge) return 0; return NET.recues.length+NET.duels.filter(aMoi).length; }
 const duelOuvert=uid=>NET.duels.find(d=>(d.etat==="a"||d.etat==="b")&&(d.a===uid||d.b===uid));
@@ -2503,29 +2529,31 @@ function ecranResultat(v){
     <div class="bloc"><p class="sur">Vos cartes</p><div class="grille">${(moiA?d.ca:d.cb).map(x=>{ const c=ID.get(x.i); return c?avecCollection({[c.i]:1+x.e*seuilEtoile(c)},()=>tuile(c,true,'data-fiche="'+c.i+'"')):""; }).join("")}</div>
     <p class="sur">Les cartes de ${esc(adv)}</p><div class="grille">${(moiA?d.cb:d.ca).map(x=>{ const c=ID.get(x.i); return c?avecCollection({[c.i]:1+x.e*seuilEtoile(c)},()=>tuile(c,true,'data-fiche="'+c.i+'"')):""; }).join("")}</div></div>`;
 }
-let tTemps=0;
+let tTemps=0, fileDuel=Promise.resolve();
+const enFile=f=>(fileDuel=fileDuel.catch(()=>{}).then(f)).catch(e=>{ toast(e.message); throw e; });
 function lancerQuestion(v){
   const x=etatQuestions(v); v.k=x.rep.length; v.choisi=undefined;
   if(v.k>=5) return finirQuestions(v);
   const arr=x.rep.slice(); arr[v.k]={c:-1,ok:false};   // la question est comptée perdue tant qu'elle n'est pas répondue : recharger la page ne la fait pas rejouer
-  return majDoc("duels/"+v.d._id,{[x.cote==="b"?"rb":"ra"]:arr,m:Date.now()}).then(()=>{
-    v.d[x.cote==="b"?"rb":"ra"]=arr.slice(0,v.k); v.temps=x; const Q=questionDuel(ID.get(x.atq[v.k].i),x.atq[v.k].e,v.d._id+"|"+x.cote+"|"+v.k);
+  enFile(()=>majDoc("duels/"+v.d._id,{[x.cote==="b"?"rb":"ra"]:arr,m:Date.now()})).catch(()=>{});
+  { v.d[x.cote==="b"?"rb":"ra"]=arr.slice(0,v.k); v.temps=x; const Q=questionDuel(ID.get(x.atq[v.k].i),x.atq[v.k].e,v.d._id+"|"+x.cote+"|"+v.k);
     v.fin=Date.now()+Q.temps*1000; v.ecran="jouer"; duels(); $("#main").scrollTop=0;
     clearInterval(tTemps); tTemps=setInterval(()=>{ if(vue.dl!==v||v.ecran!=="jouer"||v.choisi!==undefined){ clearInterval(tTemps); return; } const s=Math.max(0,Math.ceil((v.fin-Date.now())/1000)), z=$("#dl-temps"); if(z) z.textContent=s; if(s<=0) repondreDuel(v,-1); },250);
-  });
+  }
 }
 async function repondreDuel(v,j){
   if(v.choisi!==undefined) return; clearInterval(tTemps);
   const x=etatQuestions(v), k=v.k, A=x.atq[k], Q=questionDuel(ID.get(A.i),A.e,v.d._id+"|"+x.cote+"|"+k), ok=j===Q.b&&Date.now()<=v.fin+1500;
   v.choisi=ok?Q.b:j; const arr=(x.rep||[]).slice(0,k); arr[k]={c:j,ok}; v.d[x.cote==="b"?"rb":"ra"]=arr; duels();
-  try{ await majDoc("duels/"+v.d._id,{[x.cote==="b"?"rb":"ra"]:arr,m:Date.now()}); }catch(e){ toast(e.message); }
+  enFile(()=>majDoc("duels/"+v.d._id,{[x.cote==="b"?"rb":"ra"]:arr,m:Date.now()})).catch(()=>{});
 }
 async function finirQuestions(v){
   const d=v.d, x=etatQuestions(v);
-  if(x.cote==="b"){ d.etat="a"; await majDoc("duels/"+d._id,{etat:"a",m:Date.now()}); v.ecran="resultat"; toast("Réponses envoyées : à "+d.pa+" de jouer"); }
-  else { const M=manches(d); d.sa=M.sa; d.sb=M.sb; d.g=M.sa===M.sb?"nul":M.sa>M.sb?d.a:d.b; d.etat="fini";
-    await majDoc("duels/"+d._id,{etat:"fini",sa:M.sa,sb:M.sb,g:d.g,m:Date.now()}); v.ecran="resultat"; }
-  duels(); $("#main").scrollTop=0; rafraichir(true);
+  if(x.cote==="b"){ d.etat="a"; v.ecran="resultat"; duels(); $("#main").scrollTop=0;
+    await enFile(()=>majDoc("duels/"+d._id,{etat:"a",m:Date.now()})); toast("Réponses envoyées : à "+d.pa+" de jouer"); }
+  else { const M=manches(d); d.sa=M.sa; d.sb=M.sb; d.g=M.sa===M.sb?"nul":M.sa>M.sb?d.a:d.b; d.etat="fini"; v.ecran="resultat"; duels(); $("#main").scrollTop=0;
+    await enFile(()=>majDoc("duels/"+d._id,{etat:"fini",sa:M.sa,sb:M.sb,g:d.g,m:Date.now()})); }
+  signaler("duels/"+d._id,d); duels(); rafraichir(true);
 }
 
 /* ——— Profil d'un joueur ——— */
@@ -2602,11 +2630,11 @@ function clicDuel(b){
     case "rafraichir": NET.err=""; NET.charge=false; duels(); break;
     case "accueil": v.ecran="accueil"; v.sel=null; clearInterval(tTemps); duels(); $("#main").scrollTop=0; rafraichir(true); break;
     case "profil": occupe(b,()=>voirJoueur(d.uid)); break;
-    case "accepter": occupe(b,async()=>{ await majDoc("amities/"+d.id,{etat:"ok"}); toast("Vous êtes maintenant amis"); fermerVoile(); await rafraichir(); }); break;
-    case "refuser": case "retirer": occupe(b,async()=>{ await effacerDoc("amities/"+d.id); fermerVoile(); await rafraichir(); }); break;
+    case "accepter": occupe(b,async()=>{ await majDoc("amities/"+d.id,{etat:"ok"}); signaler("amities/"+d.id); toast("Vous êtes maintenant amis"); fermerVoile(); await rafraichir(); }); break;
+    case "refuser": case "retirer": occupe(b,async()=>{ await effacerDoc("amities/"+d.id); signaler("amities/"+d.id); fermerVoile(); await rafraichir(); }); break;
     case "ajouter": occupe(b,async()=>{ await demanderAmi(d.uid); fermerVoile(); }); break;
     case "defier": { const a=NET.amis.find(x=>x.uid===d.uid); if(!a) break; fermerVoile(); if(vue.tab!=="duels") aller("duels"); vue.dl={ecran:"choisir",mode:"defier",contre:a,sel:[]}; duels(); $("#main").scrollTop=0; break; }
-    case "annuler": case "decliner": occupe(b,async()=>{ await effacerDoc("duels/"+d.id); await rafraichir(); }); break;
+    case "annuler": case "decliner": occupe(b,async()=>{ const x=duel(d.id); await effacerDoc("duels/"+d.id); signaler("duels/"+d.id,x); await rafraichir(); }); break;
     case "relever": { const x=duel(d.id); if(!x) break; if(x.cb&&x.cb.length===5){ vue.dl={ecran:"jouer",d:x,sel:null}; occupe(b,()=>lancerQuestion(vue.dl)); } else { vue.dl={ecran:"choisir",mode:"relever",d:x,contre:{uid:x.a,pseudo:x.pa},sel:[]}; duels(); $("#main").scrollTop=0; } break; }
     case "repondre": { const x=duel(d.id); if(!x) break; vue.dl={ecran:"jouer",d:x}; occupe(b,()=>lancerQuestion(vue.dl)); break; }
     case "voir": { const x=duel(d.id); if(!x) break; vue.dl={ecran:"resultat",d:x}; duels(); $("#main").scrollTop=0; break; }
@@ -2617,9 +2645,9 @@ function clicDuel(b){
 }
 async function demanderAmi(uid){
   if(NET.amis.find(a=>a.uid===uid)||NET.envoyees.find(x=>x.a===uid)) return;
-  const rec=NET.recues.find(x=>x.de===uid); if(rec){ await majDoc("amities/"+rec._id,{etat:"ok"}); toast("Vous êtes maintenant amis"); return rafraichir(); }
+  const rec=NET.recues.find(x=>x.de===uid); if(rec){ await majDoc("amities/"+rec._id,{etat:"ok"}); signaler("amities/"+rec._id); toast("Vous êtes maintenant amis"); return rafraichir(); }
   const p=await lireDoc("joueurs/"+uid); if(!p) throw new Error("Ce joueur n'existe plus.");
-  await ecrireDoc("amities/"+L.uid+"_"+uid,{de:L.uid,a:uid,pde:MOI.pseudo,pa:p.pseudo,etat:"attente",t:Date.now()});
+  await ecrireDoc("amities/"+L.uid+"_"+uid,{de:L.uid,a:uid,pde:MOI.pseudo,pa:p.pseudo,etat:"attente",t:Date.now()}); signaler("amities/"+L.uid+"_"+uid);
   toast("Demande envoyée à "+p.pseudo); await rafraichir(true);
 }
 async function engager(v){
@@ -2627,11 +2655,11 @@ async function engager(v){
   if(v.mode==="defier"){
     if(duelOuvert(v.contre.uid)) throw new Error("Un duel est déjà en cours avec "+v.contre.pseudo+".");
     const id=nouvelId(), d={a:L.uid,b:v.contre.uid,pa:MOI.pseudo,pb:v.contre.pseudo,ca:cartesEnJeu(v.sel),cb:[],ra:[],rb:[],etat:"b",t:Date.now(),m:Date.now()};
-    await creerDoc("duels",id,d); d._id=id; NET.duels.unshift(d);
+    await creerDoc("duels",id,d); d._id=id; NET.duels.unshift(d); signaler("duels/"+id,d);
     vue.dl={ecran:"accueil"}; duels(); $("#main").scrollTop=0; toast("Duel lancé : "+v.contre.pseudo+" doit maintenant relever le défi");
     return;
   }
-  const d=v.d, cb=cartesEnJeu(v.sel); await majDoc("duels/"+d._id,{cb,m:Date.now()}); d.cb=cb;
+  const d=v.d, cb=cartesEnJeu(v.sel); d.cb=cb; enFile(()=>majDoc("duels/"+d._id,{cb,m:Date.now()})).catch(()=>{});
   vue.dl={ecran:"jouer",d}; await lancerQuestion(vue.dl);
 }
 async function soumettre(f){
