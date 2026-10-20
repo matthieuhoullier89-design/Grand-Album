@@ -1228,6 +1228,16 @@ body,button,input,select,textarea{font-feature-settings:"lnum" 1}
   #racine .tuile:hover{transform:translateY(-3px);box-shadow:var(--o-3)}
 }
 
+/* — Profil : boutons Personnaliser et Paramètres sous la photo ; choix du cadre dans « Image et cadre » — */
+#racine .pf-hero .btns{align-self:stretch;margin-top:var(--s-2)}
+#racine .pf-cadres{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:var(--s-2)}
+#racine .pf-cadres .pf-av-o{width:auto;min-height:44px;padding:var(--s-2) 4px;border-radius:var(--r-m);transition:box-shadow var(--d-1),background-color var(--d-1)}
+#racine .pf-cadres .pf-av-o[aria-pressed="true"]{background:color-mix(in srgb,var(--laiton) 12%,transparent);box-shadow:inset 0 0 0 2px var(--laiton)}
+#racine .pf-cad-ap{display:grid;place-items:center;min-height:72px}
+/* Gris posé sur les images seulement : sur iPhone, un filtre sur le bloc entier dédoublait le cadre. */
+#racine .pf-cadres .verrou .pf-cad-ap img{filter:grayscale(.85) brightness(.75)}
+#racine .pf-cadres .pf-cad-c{font-size:11px;color:var(--encre-2)}
+
 /* ═══════════════ Version 3.0 · Typographie et composants communs, couleurs du thème « Archives » ═══════════════
    Polices et mise en forme : identiques pour tous les thèmes (seules les couleurs changent).
    Vélin, encre bleu-noir et bleu impérial ; clair le jour, sombre la nuit, comme l'appareil.
@@ -3400,16 +3410,16 @@ function rendreProfil(){
       return `<button class="pf-serie" data-pf-serie="${k}"${a?"":" disabled"}>${email(k)}<span class="pf-sn"><b>${esc(n)}</b><span class="pf-jauge"><i style="width:${Math.round(a/t*100)}%"></i></span></span><small>${a} / ${t}</small></button>`; }).join("")}</div>`;
   ouvrirVoile(`<div class="ov-haut">${P.depuis?`<button class="retour" data-pf="mien">← Mon profil</button>`:`<span class="ov-etape">${moi?"Mon profil":ami?"Ami":"Joueur"}</span>`}<button class="rond" data-act="fermer" aria-label="Fermer">×</button></div>
     <div class="pf">
-      <div class="pf-hero">${moi?`<button class="pf-av" data-pf="avatar" aria-label="Changer l'image de profil">${avatarCadre(av,S.cos.cadre,96)}<span class="pf-crayon" aria-hidden="true">Modifier</span></button>`:avatarCadre(av,(p&&p.cos&&p.cos.c)||"classique",96)}
+      <div class="pf-hero">${moi?`<button class="pf-av" data-pf="avatar" aria-label="Changer l'image et le cadre">${avatarCadre(av,S.cos.cadre,96)}<span class="pf-crayon" aria-hidden="true">Modifier</span></button>`:avatarCadre(av,(p&&p.cos&&p.cos.c)||"classique",96)}
         <h2 class="pf-nom">${esc(nom)}</h2>${titreHtml(moi?S.cos.titre:(p&&p.cos&&p.cos.t)||"recrue")}<p class="pm-d">${esc(bilan)}</p>
-        ${emblemesHtml(moi?emblemesGagnes():((p&&p.cos&&Array.isArray(p.cos.e))?p.cos.e:[]))}</div>
+        ${emblemesHtml(moi?emblemesGagnes():((p&&p.cos&&Array.isArray(p.cos.e))?p.cos.e:[]))}${moi?`<div class="btns"><button class="btn" data-gr="cadre">${icCos("boutique")} Personnaliser</button><button class="btn clair" data-ouvre="param">${icCos("param")} Paramètres</button></div>`:""}</div>
       <div class="d-stats"><div><b>${r.nb}</b><span>sur ${D.length} fiches</span></div><div><b>${r.et}</b><span>${r.et>1?"étoiles":"étoile"}</span></div><div><b>${r.leg}</b><span>${r.leg>1?"légendaires":"légendaire"}</span></div></div>
       ${act?`<div class="btns">${act}</div>`:""}
       <section class="pm-s"><div class="pf-t"><h2>Vitrine</h2>${moi?`<button class="lien" data-pf="vitrine">Composer</button>`:""}</div>
         ${!P.visible?`<p class="pm-d">Vitrine cachée.</p>`:vit.length?`<div class="grille pf-vit">${vit.map(carte).join("")}</div>`:`<p class="pm-d">${moi?"Choisissez jusqu'à "+VIT_MAX+" fiches à mettre en avant.":"Aucune fiche exposée."}</p>`}</section>
       ${moi?`<section class="pm-s"><div class="pf-t"><h2>Amis${EN_LIGNE&&L&&MOI&&NET.amis.length?" · "+NET.amis.length:""}</h2></div><div id="pf-amis">${amisProfil()}</div></section>`:""}
       <section class="pm-s"><div class="pf-t"><h2>Collection</h2></div>${col}</section>
-      ${moi?`<div class="btns"><button class="btn" data-gr="cadre">${icCos("boutique")} Personnaliser</button><button class="btn clair" data-ouvre="param">${icCos("param")} Paramètres</button></div>`:""}
+      
     </div>`,moi?"Mon profil":"Profil de "+nom);
 }
 /* Choisir son image de profil. */
@@ -3417,14 +3427,17 @@ function choisirAvatar(){
   const L5=D.filter(c=>possede(c)&&image(c)).sort((a,b)=>(b.r-a.r)||(ORDRE[a.c]-ORDRE[b.c])||(a.n-b.n));
   const cur=S.av||{t:"n"};
   ouvrirVoile(`<div class="ov-haut"><button class="retour" data-pf="mien">← Mon profil</button><button class="rond" data-act="fermer" aria-label="Fermer">×</button></div>
-    <div class="pf"><div class="pf-hero">${avatarHtml(S.av,104,"grand")}<h2 class="pf-nom">Image de profil</h2></div>
+    <div class="pf"><div class="pf-hero">${avatarCadre(S.av,S.cos.cadre,104)}<h2 class="pf-nom">Image et cadre</h2></div>
       <section class="pm-s"><h2>Emblème ou photo</h2>
         <div class="pf-av-choix"><button class="pf-av-o" data-pf-av="n" aria-pressed="${cur.t==="n"}">${avatarHtml(null,64)}<small>Emblème impérial</small></button>
         <label class="pf-av-o">${avatarHtml(cur.t==="p"?cur:null,64)}<small>Ma photo</small><input type="file" id="pf-photo" accept="image/*" class="vh"></label></div>
         <p class="pm-d">La photo est réduite à 192 pixels et visible des joueurs connectés.</p></section>
+      <section class="pm-s"><h2>Cadre</h2>
+        <div class="pf-portraits pf-cadres">${COSM.cadre.map(o=>{ const a=possedeCos("cadre",o.i); return `<button class="pf-av-o${a?"":" verrou"}" data-pf-cadre="${o.i}" aria-pressed="${S.cos.cadre===o.i}"><span class="pf-cad-ap">${avatarCadre(S.av,o.i,44)}</span><small>${esc(o.n)}</small>${a?"":`<small class="pf-cad-c">${esc(o.c)}</small>`}</button>`; }).join("")}</div>
+        <p class="pm-d">Un cadre verrouillé se débloque en jouant ou s'achète dans « Personnaliser ».</p></section>
       <section class="pm-s"><h2>Un portrait de votre album</h2>
         ${L5.length?`<div class="pf-portraits">${L5.map(c=>{ const v=image(c); return `<button class="pf-av-o" data-pf-av-carte="${c.i}" aria-pressed="${cur.t==="c"&&cur.i===c.i}" aria-label="${esc(c.t)}"><span class="av" style="width:64px;height:64px"><img src="${v[0]}" alt="" style="object-position:${esc(v[1]||"50% 25%")}"></span><small>${esc(c.t)}</small></button>`; }).join("")}</div>`:`<p class="pm-d">Les fiches illustrées que vous possédez apparaîtront ici.</p>`}
-      </section></div>`,"Image de profil");
+      </section></div>`,"Image et cadre");
 }
 function poserAvatar(av){
   S.av=av; garder(); majBoutonProfil();
@@ -3497,7 +3510,7 @@ function clicDuel(b){
   if(d.ouvre){ if(d.ouvre==="param") parametres(); else if(d.ouvre==="apropos") aPropos(true); else if(d.ouvre==="profil") voirJoueur(null); return true; }
   if(d.pfFiche){ const c=ID.get(d.pfFiche), P=PROF; if(c&&P) voirFiche(c,()=>{ PROF=P; rendreProfil(); }); return true; }
   if(d.pfSerie){ if(PROF){ PROF.serie=d.pfSerie; rendreProfil(); $("#ov").scrollTop=0; } return true; }
-  if(d.pfAvCarte){ poserAvatar({t:"c",i:d.pfAvCarte}); return true; }
+  if(d.pfCadre){ const i=d.pfCadre; if(possedeCos("cadre",i)){ S.cos.cadre=i; garder(); majBoutonProfil(); if(EN_LIGNE&&L&&MOI) majDoc("joueurs/"+L.uid,{cos:cosPublic()}).catch(()=>{}); const y=$("#ov").scrollTop; choisirAvatar(); $("#ov").scrollTop=y; toast((objet("cadre",i)||{}).n+" : équipé"); } else gardeRobe("cadre"); return true; }   if(d.pfAvCarte){ poserAvatar({t:"c",i:d.pfAvCarte}); return true; }
   if(d.pfAv){ poserAvatar(null); return true; }
   if(d.pf){ switch(d.pf){
       case "series": if(PROF){ PROF.serie=null; rendreProfil(); } break;
