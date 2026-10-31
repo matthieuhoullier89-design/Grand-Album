@@ -3315,7 +3315,7 @@ function aPropos(depuis){
     <li>Les abeilles se gagnent au Défi, en duel et avec les succès.</li></ul>
     <h3>Les duels</h3>
     <ul><li>Cinq cartes contre cinq face à un ami, chacun répond quand il veut aux questions des cartes adverses. Une bonne réponse fait marquer la défense de votre carte, une erreur l'attaque de la carte d'en face. Victoire : ${pl(GAIN.v,"abeille")}, nul : ${pl(GAIN.n,"abeille")}, défaite : ${pl(GAIN.d,"abeille")}.</li>
-    <li>Les duels, les amis et le compte se trouvent dans l'application installée ; la règle complète est dans l'onglet Duels (« Comment se joue un duel ? »).</li></ul>
+    <li>Chaque joueur a un compte : il garde son album et lui ouvre les amis et les duels. La règle complète est dans l'onglet Duels (« Comment se joue un duel ? »).</li></ul>
     <h3>L'Ordre du jour</h3>
     <ul><li>Chaque jour, les événements de l'épopée survenus à la même date ; une fiche qui raconte l'événement y est signalée. Les jours à venir restent sous cadenas jusqu'à leur date, puis restent ouverts.</li></ul>
     <h3>Succès et profil</h3>
@@ -3336,7 +3336,7 @@ function aPropos(depuis){
     <p class="doux">Débloque un exemplaire de chaque fiche, tous les cadres, thèmes, finitions, plis et titres, les badges de série au palier or et toutes les décorations. Votre partie actuelle est mise de côté sur cet appareil : vous pouvez y revenir.</p>
     <div class="btns" id="ua-g">${uaBoutonsG()}</div>`:""}
     <h3>Votre progression</h3>
-    <p>${EN_LIGNE?"Elle est enregistrée sur cet appareil. Avec un compte, elle est aussi gardée en ligne et vous suit sur un autre téléphone.":"Elle est enregistrée sur cet appareil uniquement."}</p>
+    <p>${EN_LIGNE?"Elle est enregistrée sur votre compte : vous la retrouvez sur un autre téléphone en vous connectant.":"Elle est enregistrée sur cet appareil uniquement."}</p>
     <p class="doux">Pour repartir de zéro, rendez-vous tout en bas des Paramètres.</p>
   </div>`,"À propos");
 }
@@ -4082,7 +4082,7 @@ async function chargerCompte(){
   else if(MOI) await envoyerProgression(true);
 }
 function adopter(srv){ S=Object.assign(neuf(),srv); normaliser(); recaler(); recharger(); try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} tout(); }
-function fermerSession(){ L=null; MOI=null; dlChoix=null; NET={amis:[],recues:[],envoyees:[],duels:[],charge:false,maj:0,err:""}; garderSession(); }
+function fermerSession(){ L=null; MOI=null; dlChoix=null; NET={amis:[],recues:[],envoyees:[],duels:[],charge:false,maj:0,err:""}; garderSession(); setTimeout(()=>{ if(typeof exigerCompte==="function") exigerCompte(); },400); }
 let tSync=0, enEnvoi=false;
 function planSync(){ if(!EN_LIGNE||!L||!MOI||dlChoix) return; clearTimeout(tSync); tSync=setTimeout(()=>envoyerProgression(),15000); }
 async function envoyerProgression(force){
@@ -4559,8 +4559,8 @@ function reglesDuel(){
 }
 
 /* ——— Paramètres ——— */
-const VERSION="2.21", VDATE="31 octobre 2026";
-const NOUVEAUTES=["Succès : 24 nouveaux succès liés aux nouveautés (étoiles et rachats, duels et amis, notifications, navigation entre les fiches, recherche et tri, thèmes, badges…)","Fiches : flèches et glissé du doigt pour passer d'une fiche à la suivante (série, album, favoris, decks…)","Thème Automatique : en mode sombre, c'est désormais exactement le thème Fontainebleau (et exactement Malmaison en mode clair)","Notifications : à l'ouverture de l'application, une invitation propose de les activer (« Plus tard » ou « Ne plus afficher »)","Marché : l'étal peut proposer une fiche que vous avez déjà ; elle se rachète alors pour gagner un doublon (une fois par fiche et par jour)","Plis : les fiches légendaires deux fois plus rares","Notifications sur le téléphone (application installée), à régler dans Paramètres, avec pastille sur l'icône","Profil : pastille sur les succès à récupérer ; « Napoléon » revient au-dessus du titre ; règles des duels et « À propos » réécrites","Paramètres : « Recommencer mon album à zéro » se trouve désormais tout en bas, avec trois confirmations (la dernière en écrivant votre pseudo)","Défi : on peut quitter un défi en cours à tout moment (« ← Quitter le défi ») ; les abeilles déjà gagnées sont gardées","Profil : recherche des joueurs par le début de leur pseudo","Retouches : flèches de retour plus grandes, icône du compte, choix du grade ; cadre Laurier sans losange, cadre Aigle impérial avec le seul N"];
+const VERSION="2.22", VDATE="31 octobre 2026";
+const NOUVEAUTES=["Compte obligatoire : le mode invité disparaît ; un album déjà commencé sur le téléphone est enregistré sur le compte créé","Succès : 24 nouveaux succès liés aux nouveautés (étoiles et rachats, duels et amis, notifications, navigation entre les fiches, recherche et tri, thèmes, badges…)","Fiches : flèches et glissé du doigt pour passer d'une fiche à la suivante (série, album, favoris, decks…)","Thème Automatique : en mode sombre, c'est désormais exactement le thème Fontainebleau (et exactement Malmaison en mode clair)","Notifications : à l'ouverture de l'application, une invitation propose de les activer (« Plus tard » ou « Ne plus afficher »)","Marché : l'étal peut proposer une fiche que vous avez déjà ; elle se rachète alors pour gagner un doublon (une fois par fiche et par jour)","Plis : les fiches légendaires deux fois plus rares","Notifications sur le téléphone (application installée), à régler dans Paramètres, avec pastille sur l'icône","Profil : pastille sur les succès à récupérer ; « Napoléon » revient au-dessus du titre ; règles des duels et « À propos » réécrites","Paramètres : « Recommencer mon album à zéro » se trouve désormais tout en bas, avec trois confirmations (la dernière en écrivant votre pseudo)","Défi : on peut quitter un défi en cours à tout moment (« ← Quitter le défi ») ; les abeilles déjà gagnées sont gardées","Profil : recherche des joueurs par le début de leur pseudo","Retouches : flèches de retour plus grandes, icône du compte, choix du grade ; cadre Laurier sans losange, cadre Aigle impérial avec le seul N"];
 /* ——— Notifications du téléphone (v2.21) ———
    Réglages propres à l'appareil (localStorage « gab-notif »). Une notification ne part que si l'album n'est pas à l'écran :
    sous les yeux du joueur, le message s'affiche dans l'album. Elles partent tant que l'album tourne en arrière-plan ;
@@ -5100,8 +5100,10 @@ let invitInstall=null, instVu=false;
 try{ window.addEventListener("beforeinstallprompt",e=>{ if(!(IOS||ANDROID)) return; e.preventDefault(); invitInstall=e; });
   window.addEventListener("appinstalled",()=>{ lsEcrire(CLE_INST,"jamais"); fermerInstall(); }); }catch(e){}
 const installable=()=>!SUR_CLAUDE&&!INSTALLEE&&(IOS||ANDROID);   // téléphones et tablettes seulement, jamais sur ordinateur
+/* v2.22 : compte obligatoire. Sans session, l'accueil (créer un compte ou se connecter) s'ouvre et ne se ferme qu'une fois connecté. */
+function exigerCompte(){ if(EN_LIGNE&&!L&&!A&&!$("#bienvenue")) ouvrirBienvenue(); }
 function premierAccueil(){
-  if(EN_LIGNE&&!L&&lsLire(CLE_BV)!=="1"&&!A) ouvrirBienvenue();
+  if(EN_LIGNE&&!L&&!A) ouvrirBienvenue();
   else setTimeout(()=>proposerInstall(false),1200);
   setTimeout(proposerNotif,2600);
 }
@@ -5117,9 +5119,8 @@ function ouvrirBienvenue(mode){
       <li><i>${g("pli")}</i>Chaque jour, des enveloppes cachetées à ouvrir pour gagner de nouvelles fiches</li>
       <li><i>${g("album")}</i>${D.length} fiches à collectionner, rangées en ${CATS.length} séries : personnages, batailles, maréchaux, citations…</li>
       <li><i>${g("defi")}</i>Le Défi et les duels pour tester vos connaissances</li></ul>
-    <div class="bv-btns"><button class="btn" data-bv="ins">Créer un compte</button><button class="btn clair" data-bv="invite">Continuer en invité</button></div>
-    <button class="lien" data-bv="con">J'ai déjà un compte</button>
-    <p class="bv-note">En invité, votre album reste sur cet appareil. Vous pourrez créer un compte plus tard.</p>`;
+    <div class="bv-btns"><button class="btn" data-bv="ins">Créer un compte</button><button class="btn clair" data-bv="con">J'ai déjà un compte</button></div>
+    <p class="bv-note">${nbPossedees()||S.bees?"Vous aviez déjà commencé votre album sur ce téléphone : créez votre compte, il y sera enregistré.":"Un compte garde votre album en lieu sûr, vous suit sur un autre téléphone et ouvre les amis et les duels."}</p>`;
   else { const ins=mode==="ins";
     f=`<div class="bv-retour"><button class="lien" data-bv="choix">← Retour</button></div>
     <div class="seg" role="group" aria-label="Compte"><button data-bv="ins" aria-pressed="${ins}">Créer un compte</button><button data-bv="con" aria-pressed="${!ins}">Se connecter</button></div>
@@ -5130,8 +5131,7 @@ function ouvrirBienvenue(mode){
       <p class="err" id="dl-err" hidden></p>
       <div class="bv-btns"><button class="btn" type="submit">${ins?"Créer mon compte":"Me connecter"}</button></div>
       ${ins?`<p class="bv-note">Votre adresse e-mail ne sert qu'à vous connecter : elle n'est jamais montrée aux autres joueurs.</p>`:`<button class="lien" type="button" data-dl="oubli">Mot de passe oublié</button>`}
-    </form>
-    <button class="lien" data-bv="invite">Continuer en invité</button>`; }
+    </form>`; }
   el.innerHTML=scene+`<div class="bv-feuille">${f}</div>`; el.scrollTop=0;
 }
 function finBienvenue(tab){
@@ -5168,7 +5168,7 @@ function proposerInstall(force){
 function fermerInstall(){ const el=$("#inst"); if(!el||el.classList.contains("part")) return; const c=$("#inst-jamais"); if(c&&c.checked) lsEcrire(CLE_INST,"jamais"); el.classList.add("part"); setTimeout(()=>el.remove(),300); setTimeout(proposerNotif,900); }
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-bv],[data-inst]"); if(!b) return; const d=b.dataset;
-  if(d.bv){ if(d.bv==="invite") finBienvenue("accueil"); else ouvrirBienvenue(d.bv==="choix"?null:d.bv); return; }
+  if(d.bv){ ouvrirBienvenue(d.bv==="choix"?null:d.bv); return; }
   if(d.inst==="ouvrir"){ fermerVoile(); setTimeout(()=>proposerInstall(true),250); return; }
   if(d.inst==="ok"&&invitInstall){ const p=invitInstall; invitInstall=null; try{ p.prompt(); p.userChoice.then(r=>{ if(r&&r.outcome==="accepted") lsEcrire(CLE_INST,"jamais"); }).catch(()=>{}); }catch(x){} }
   if(d.inst==="ok"||d.inst==="plus-tard") fermerInstall();
